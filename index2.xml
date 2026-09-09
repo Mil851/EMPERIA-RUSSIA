@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMPERIA CRMP</title>
+    <style>
+        body { background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 15px; }
+        #auth-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#111; display:flex; justify-content:center; align-items:center; z-index:9999; }
+        .auth-box { background:#222; padding:25px; border-radius:10px; text-align:center; width:90%; max-width:350px; box-shadow:0 0 15px rgba(231,76,60,0.5); }
+        .auth-box input { width:100%; padding:12px; margin:15px 0; background:#333; color:#fff; border:1px solid #555; border-radius:5px; text-align:center; box-sizing:border-box; }
+        #game-screen { display: none; }
+        .header { text-align:center; border-bottom:2px solid #e74c3c; padding-bottom:10px; margin-bottom:20px; }
+        .card { background:#2c2c2c; border-radius:10px; padding:15px; margin-bottom:15px; }
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .stat-item { background:#222; padding:8px; border-radius:5px; font-size:14px; }
+        .btn { display:block; width:100%; background:#27ae60; color:#fff; border:none; padding:12px; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:10px; text-align:center; }
+        .btn-work { background:#f39c12; }
+        .btn-fraction { background:#9b59b6; }
+        .btn-opg { background:#c0392b; }
+        select { width:100%; padding:10px; background:#333; color:#fff; border:1px solid #555; border-radius:5px; margin-top:5px; }
+        .nav-tabs { display:flex; margin-bottom:15px; }
+        .tab-btn { background:#333; color:#fff; border:none; padding:10px; flex:1; margin:0 2px; border-radius:5px; cursor:pointer; }
+        .tab-btn.active { background:#e74c3c; }
+        .page { display:none; }
+        .page.active { display:block; }
+        .cmd-input { width:100%; padding:10px; background:#111; color:#5dade2; border:1px solid #34495e; border-radius:5px; font-family:monospace; box-sizing:border-box; }
+    </style>
+</head>
+<body>
+
+    <!-- ОКНО ВХОДА (РП НИК) -->
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h2>EMPERIA CRMP</h2>
+            <p style="color:#bbb; font-size:13px;">Введите ник в формате: Имя_Фамилия</p>
+            <input type="text" id="rp-name-input" placeholder="Пример: Ivan_Ivanov">
+            <button class="btn" onclick="startGame()">Войти в игру</button>
+        </div>
+    </div>
+
+    <!-- ИГРОВОЙ ЭКРАН -->
+    <div id="game-screen">
+        <div class="header"><h2>EMPERIA CRMP Онлайн</h2></div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="b-prof" onclick="switchTab('profile')">Профиль</button>
+            <button class="tab-btn" id="b-jobs" onclick="switchTab('jobs')">Работы</button>
+            <button class="tab-btn" id="b-frac" onclick="switchTab('fractions')">Организации</button>
+        </div>
+
+        <!-- СТРАНИЦА: ПРОФИЛЬ -->
+        <div id="profile" class="page active">
+            <div class="card">
+                <h3>Паспорт гражданина</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">Ник: <b id="p-name">...</b></div>
+                    <div class="stat-item">Баланс: <b id="p-money" style="color:#2ecc71;">1000 $</b></div>
+                    <div class="stat-item">Фракция: <b id="p-frac">Отсутствует</b></div>
+                    <div class="stat-item">Ранг: <b id="p-rank">Нет</b></div>
+                    <div class="stat-item">Админка: <b id="p-admin" style="color:#e74c3c;">Игрок</b></div>
+                </div>
+            </div>
+
+            <div class="card" style="border-left:4px solid #3498db;">
+                <h3>Чат области</h3>
+                <div id="chat-box" style="height:150px; overflow-y:auto; background:#111; padding:10px; border-radius:5px; font-size:13px; font-family:monospace; margin-bottom:10px;">
+                    <p style="color:#f1c40f;">[Система] Добро пожаловать! Используйте /help для просмотра команд.</p>
+                </div>
+                <input type="text" id="chat-input" class="cmd-input" placeholder="Текст или команда (/help, /report [текст])" onkeydown="if(event.key==='Enter') sendAction()">
+            </div>
+        </div>
+
+        <!-- СТРАНИЦА: РАБОТЫ -->
+        <div id="jobs" class="page">
+            <div class="card">
+                <h3>Выбор работы</h3>
+                <select id="job-select" onchange="updateJobInfo()">
+                    <option value="miner">Шахтер (+150$)</option>
+                    <option value="lumberjack">Лесоруб (+200$)</option>
+                    <option value="woodcutter">Дровосек (+180$)</option>
+                    <option value="farmer">Фермер (+250$)</option>
+                    <option value="trucker">Дальнобойщик (+500$)</option>
+                </select>
+                <button class="btn btn-work" id="work-btn" onclick="doWork()">Работать</button>
+            </div>
+        </div>
+
+        <!-- СТРАНИЦА: ФРАКЦИИ -->
+        <div id="fractions" class="page">
+            <div class="card">
+                <h3>Государственные службы</h3>
+                <select id="gov-select">
+                    <option value="Правительство">Правительство</option>
+                    <option value="ДПС">УГИБДД (ДПС)</option>
+                    <option value="ППС">УМВД (ППС)</option>
+                    <option value="ФСБ">УФСБ</option>
+                    <option value="Армия">Армия (ВЧ)</option>
+                </select>
+                <button class="btn btn-fraction" onclick="joinFraction('gov')">Вступить</button>
+            </div>
+
+            <div class="card" style="border:1px solid #c0392b;">
+                <h3>Криминальные ОПГ</h3>
+                <select id="opg-select">
+                    <option value="Батыревская ОПГ">Батыревская ОПГ</option>
+                    <option value="Арзамасская ОПГ">Арзамасская ОПГ</option>
+                    <option value="Лыткаринская ОПГ">Лыткаринская ОПГ</option>
+                </select>
+                <button class="btn btn-opg" onclick="joinFraction('opg')">Вступить в ОПГ</button>
+            </div>
+            <button class="btn" style="background:#7f8c8d;" onclick="leaveFraction()">Уволиться</button>
+        </div>
+    </div>
+
+    <script>
+        let player = { name: "", money: 1000, fraction: "Отсутствует", rank: "Нет", isOpg: false, adminLevel: 0 };
+        const jobDetails = {
+            miner: { text: "Добывать руду ⛏", pay: 150 },
+            lumberjack: { text: "Валить лес 🪓", pay: 200 },
+            woodcutter: { text: "Колоть дрова 🪵", pay: 180 },
+            farmer: { text: "Собирать урожай 🚜", pay: 250 },
+            trucker: { text: "Везти груз 🚚", pay: 500 }
+        };
+
+        function startGame() {
+            const nameInput = document.getElementById('rp-name-input').value.trim();
+            if (!/^[A-Z][a-z]+_[A-Z][a-z]+$/.test(nameInput)) {
+                alert("Ошибка! Формат ника должен быть: Имя_Фамилия (Пример: Ivan_Ivanov)");
+                return;
+            }
+            player.name = nameInput;
+            document.getElementById('p-name').innerText = player.name;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            updateUI();
+        }
+
+        function addMsg(sender, text, color = "#ffffff") {
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<p style="margin:4px 0;color:${color};"><b>${sender}</b> ${text}</p>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendAction() {
+            const input = document.getElementById('chat-input');
+            const str = input.value.trim();
+            if (!str) return;
+
+            if (str.startsWith('/')) {
+                const args = str.split(' ');
+                const cmd = args[0].toLowerCase();
+
+                if (cmd === '/help') {
+                    addMsg("[Помощь]", "Команды: /pass, /report [текст], /ah, /setadmin [0-4], /money [сумма], /clear", "#f1c40f");
+                } else if (cmd === '/pass') {
+                    addMsg("[Паспорт]", `Гражданин: ${player.name} | Баланс: ${player.money}$ | Фракция: ${player.fraction}`, "#3498db");
+                } else if (cmd === '/report') {
+                    addMsg("[Репорт]", `Отправлено: "${args.slice(1).join(' ')}"`, "#f39c12");
+                    setTimeout(() => addMsg("[Поддержка]", "Спешу на помощь! Приятной игры.", "#e67e22"), 1200);
+                } else if (cmd === '/setadmin') {
+                    let lvl = parseInt(args[1]);
+                    if (!isNaN(lvl) && lvl >= 0 && lvl <= 4) {
+                        player.adminLevel = lvl;
+                        document.getElementById('p-admin').innerText = lvl > 0 ? `Админ (${lvl} лвл)` : "Игрок";
+                        addMsg("[Админка]", `Установлен уровень: ${lvl}`, "#e74c3c");
+                    }
+                } else if (cmd === '/ah') {
+                    if (player.adminLevel > 0) addMsg("[Админ]", "Доступно: /money [сумма], /clear", "#e74c3c");
+                    else addMsg("[Ошибка]", "Вы не админ!", "#c0392b");
+                } else if (cmd === '/money') {
+                    let count = parseInt(args[1]);
+                    if (player.adminLevel >= 2 && !isNaN(count)) { player.money += count; updateUI(); addMsg("[Админ]", `Выдано ${count}$`, "#e74c3c"); }
+                } else if (cmd === '/clear') {
+                    if (player.adminLevel >= 1) document.getElementById('chat-box').innerHTML = "";
+                } else {
+                    addMsg("[Ошибка]", "Неизвестная команда. Введите /help", "#c0392b");
+                }
+            } else {addMsg([Общий] ${player.name}:, str, player.isOpg ? "#c0392b" : "#3498db");}input.value = "";}function updateUI() {document.getElementById('p-money').innerText = player.money + " $";document.getElementById('p-frac').innerText = player.fraction;document.getElementById('p-rank').innerText = player.rank;}function switchTab(id) {document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));document.getElementById(id).classList.add('active');if(id === 'profile') document.getElementById('b-prof').classList.add('active');if(id === 'jobs') document.getElementById('b-jobs').classList.add('active');if(id === 'fractions') document.getElementById('b-frac').classList.add('active');}function updateJobInfo() {document.getElementById('work-btn').innerText = jobDetails[document.getElementById('job-select').value].text;}function doWork() {player.money += jobDetails[document.getElementById('job-select').value].pay;updateUI();}function joinFraction(type) {if (type === 'gov') { player.fraction = document.getElementById('gov-select').value; player.rank = "Рядовой (1)"; player.isOpg = false; }else { player.fraction = document.getElementById('opg-select').value; player.rank = "Браток (1)"; player.isOpg = true; }updateUI();addMsg("[Фракция]", Вы вступили в: ${player.fraction}, "#9b59b6");}function leaveFraction() {if (player.fraction === "Отсутствует") return;addMsg("[Фракция]", Вы уволились из ${player.fraction}, "#7f8c8d");player.fraction = "Отсутствует"; player.rank = "Нет"; player.isOpg = false;updateUI();}setInterval(() => { if (player.fraction !== "Отсутствует") { player.money += player.isOpg ? 400 : 600; updateUI(); } }, 10000);updateJobInfo();updateUI();
+
+                      
